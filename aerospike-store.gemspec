@@ -14,5 +14,5 @@ Gem::Specification.new do |spec|
   spec.license       = "Apache2.0"
   spec.files         = Dir.glob("lib/**/*") + %w(LICENSE.txt README.md)
   spec.require_paths = ["lib"]
-  spec.add_runtime_dependency "aerospike", '>= 3.0'
+  spec.add_runtime_dependency "aerospike", '<= 3.0'
 end
