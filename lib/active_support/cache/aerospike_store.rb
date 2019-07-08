@@ -15,7 +15,7 @@ module ActiveSupport
 
     def initialize(options = {})
       options.merge!(self.class::AEROSPIKE_DEFAULT_OPTIONS) { |key, v1, v2| v1 }
-      @client = options.delete(:client) || Aerospike::Client.new(options.delete(:host), options.delete(:port))
+      @client = options.delete(:client) || Aerospike::Client.new(Aerospike::Host.new(options.delete(:host), options.delete(:port)))
       super
     end
 
@@ -38,7 +38,7 @@ module ActiveSupport
     protected
       def internal_read_entry(key, options)
         record = @client.get(as_key(key, options))
-        if record 
+        if record
           # single-bin namespaces do not return a bin name
           (record.bins.length == 1)? record.bins.values.first : record.bins[options[:bin]]
         else
@@ -49,7 +49,7 @@ module ActiveSupport
       def read_entry(key, options)
         if value = internal_read_entry(key, options)
           # if it is not raw it is a marshalled ActiveSupport::Cache::Entry
-          value = options[:raw]? ActiveSupport::Cache::Entry.new(value) : Marshal.load(value)
+          ActiveSupport::Cache::Entry.new(Marshal.load(value))
         else
           nil
         end
@@ -58,7 +58,7 @@ module ActiveSupport
       def write_entry(key, entry, options)
         options[:expiration] ||= options[:expires_in] if options[:expires_in]
         options[:record_exists_action] ||= options[:unless_exist]? Aerospike::RecordExistsAction::CREATE_ONLY : Aerospike::RecordExistsAction::REPLACE
-        value = options[:raw]? entry.value : Marshal.dump(entry)
+        value = Marshal.dump(entry.value).force_encoding(Aerospike.encoding)
         begin
           @client.put(as_key(key, options), {options[:bin] => value}, options)
         rescue Aerospike::Exceptions::Aerospike => e
